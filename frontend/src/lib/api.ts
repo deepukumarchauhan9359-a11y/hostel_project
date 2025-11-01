@@ -2,6 +2,27 @@ export const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http
 
 let inMemoryToken: string | null = null;
 
+// Helper to get token - checks both memory and localStorage
+function getAuthToken(): string | null {
+  // Always check localStorage first to get the most up-to-date token
+  const storedToken = localStorage.getItem('authToken');
+  if (storedToken) {
+    // Sync memory with localStorage
+    if (inMemoryToken !== storedToken) {
+      console.log('🔄 Syncing token from localStorage to memory');
+      inMemoryToken = storedToken;
+    }
+    return storedToken;
+  }
+  
+  // Fallback to memory if localStorage is empty
+  if (inMemoryToken) {
+    return inMemoryToken;
+  }
+  
+  return null;
+}
+
 export async function apiRequest<T>(
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   path: string,
@@ -12,8 +33,11 @@ export async function apiRequest<T>(
     'Content-Type': 'application/json',
   };
 
-  if (requiresAuth && inMemoryToken) {
-    headers.Authorization = `Bearer ${inMemoryToken}`;
+  if (requiresAuth) {
+    const token = getAuthToken();
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
   }
 
   const options: RequestInit = {
@@ -45,10 +69,21 @@ export async function apiRequest<T>(
 
 export function setAuthToken(token: string) {
   inMemoryToken = token;
+  // Also persist to localStorage
+  localStorage.setItem('authToken', token);
 }
 
 export function clearAuthToken() {
   inMemoryToken = null;
+  localStorage.removeItem('authToken');
+}
+
+// Initialize token from localStorage on module load
+if (typeof window !== 'undefined') {
+  const storedToken = localStorage.getItem('authToken');
+  if (storedToken) {
+    inMemoryToken = storedToken;
+  }
 }
 
 

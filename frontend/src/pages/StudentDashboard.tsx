@@ -7,7 +7,6 @@ import ComplaintCard from '../components/ComplaintCard';
 import ComplaintForm from '../components/ComplaintForm';
 import FeedbackForm from '../components/FeedbackForm';
 import { PlusCircle, FileText, Clock, CheckCircle, AlertTriangle } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 const StudentDashboard = () => {
   const { user } = useAuth();
@@ -108,16 +107,13 @@ const StudentDashboard = () => {
 
             {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              {stats.map((stat, index) => (
-                <motion.div
+              {stats.map((stat) => (
+                <div
                   key={stat.title}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  className="card-hover p-6 group"
+                  className="card p-6"
                 >
                   <div className="flex items-center">
-                    <div className={`p-4 rounded-2xl ${stat.lightColor} group-hover:scale-110 transition-transform duration-300`}>
+                    <div className={`p-4 rounded-2xl ${stat.lightColor} transition-transform duration-300`}>
                       <stat.icon className={`w-6 h-6 ${stat.textColor}`} />
                     </div>
                     <div className="ml-4">
@@ -125,7 +121,7 @@ const StudentDashboard = () => {
                       <p className="text-3xl font-bold text-secondary-900">{stat.value}</p>
                     </div>
                   </div>
-                </motion.div>
+                </div>
               ))}
             </div>
 

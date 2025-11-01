@@ -1,30 +1,29 @@
 import { Complaint } from '../models/Complaint.js';
 import { User } from '../models/User.js';
+import { asyncHandler } from '../errors/asyncHandler.js';
+import mongoose from 'mongoose';
 
-export async function createComplaintController(req, res) {
-  try {
-    console.log('Creating complaint with data:', req.body);
-    console.log('User:', req.user);
-    console.log('Files:', req.files);
-    
-    // Check database connection
-    const mongoose = await import('mongoose');
-    if (mongoose.connection.readyState !== 1) {
-      console.error('Database not connected');
-      return res.status(503).json({ message: 'Database not connected' });
-    }
-    
-    const { title, category, description, priority, room } = req.body;
-    if (!title || !category || !description) {
-      return res.status(400).json({ message: 'Missing fields' });
-    }
+export const createComplaintController = asyncHandler(async (req, res) => {
+  console.log('Creating complaint with data:', req.body);
+  console.log('User:', req.user);
+  console.log('Files:', req.files);
+  
+  // Check database connection
+  if (mongoose.connection.readyState !== 1) {
+    throw new Error('Database not connected');
+  }
+  
+  const { title, category, description, priority, room } = req.body;
+  if (!title || !category || !description) {
+    throw new Error('Missing required fields');
+  }
 
   // Derive hostelBlock from authenticated student to prevent spoofing
   const student = await User.findById(req.user.id);
   console.log('Found student:', student ? { id: student.id, role: student.role, hostelBlock: student.hostelBlock } : 'Not found');
   
   if (!student || student.role !== 'Student') {
-    return res.status(403).json({ message: 'Only students can submit complaints' });
+    throw new Error('Only students can submit complaints');
   }
   if (!student.hostelBlock) {
     console.log('Student has no hostelBlock, using default');
@@ -74,66 +73,65 @@ export async function createComplaintController(req, res) {
   
   console.log('Complaint created successfully:', complaint.id);
 
-    res.status(201).json({
-      message: `Complaint sent to ${derivedHostelBlock} warden successfully`,
-      complaint,
-    });
-  } catch (error) {
-    console.error('Error creating complaint:', error);
-    res.status(500).json({ 
-      message: 'Internal server error', 
-      error: error.message 
-    });
-  }
-}
+  res.status(201).json({
+    message: `Complaint sent to ${derivedHostelBlock} warden successfully`,
+    complaint,
+  });
+});
 
-export async function listComplaintsController(req, res) {
+export const listComplaintsController = asyncHandler(async (req, res) => {
   const role = req.user.role;
   let filter = {};
   if (role === 'Student') {
     filter.student = req.user.id;
   }
   if (role === 'Warden') {
-    filter.hostelBlock = req.user.block; // ensures wardens only see their block's complaints
+    filter.hostelBlock = req.user.hostelBlock; // ensures wardens only see their block's complaints
   }
-  const complaints = await Complaint.find(filter).sort({ createdAt: -1 });
+  // Admin can see all complaints, so no filter is applied
+  
+  const complaints = await Complaint.find(filter)
+    .populate('student', 'name email')
+    .sort({ createdAt: -1 });
   res.json({ complaints });
-}
+});
 
-export async function getComplaintController(req, res) {
-  const complaint = await Complaint.findById(req.params.id);
-  if (!complaint) return res.status(404).json({ message: 'Not found' });
+export const getComplaintController = asyncHandler(async (req, res) => {
+  const complaint = await Complaint.findById(req.params.id)
+    .populate('student', 'name email');
+  if (!complaint) throw new Error('Complaint not found');
   res.json({ complaint });
-}
+});
 
-export async function updateComplaintController(req, res) {
+export const updateComplaintController = asyncHandler(async (req, res) => {
   const complaint = await Complaint.findById(req.params.id);
-  if (!complaint) return res.status(404).json({ message: 'Not found' });
+  if (!complaint) throw new Error('Complaint not found');
   if (req.user.role === 'Student' && complaint.student.toString() !== req.user.id)
-    return res.status(403).json({ message: 'Forbidden' });
-  if (complaint.status === 'Resolved') return res.status(400).json({ message: 'Cannot edit resolved complaint' });
+    throw new Error('Forbidden');
+  if (complaint.status === 'Resolved') throw new Error('Cannot edit resolved complaint');
   const allowed = ['title', 'category', 'description', 'priority', 'room'];
   for (const key of allowed) {
     if (req.body[key] !== undefined) complaint[key] = req.body[key];
   }
   await complaint.save();
   res.json({ complaint });
-}
+});
 
-export async function deleteComplaintController(req, res) {
+export const deleteComplaintController = asyncHandler(async (req, res) => {
   const complaint = await Complaint.findById(req.params.id);
-  if (!complaint) return res.status(404).json({ message: 'Not found' });
+  if (!complaint) throw new Error('Complaint not found');
   if (req.user.role === 'Student' && complaint.student.toString() !== req.user.id)
-    return res.status(403).json({ message: 'Forbidden' });
+    throw new Error('Forbidden');
   await complaint.deleteOne();
   res.json({ ok: true });
-}
+});
 
-export async function transitionStatusController(req, res) {
-  const complaint = await Complaint.findById(req.params.id);
-  if (!complaint) return res.status(404).json({ message: 'Not found' });
-  if (req.user.role !== 'Warden' || complaint.hostelBlock !== req.user.block)
-    return res.status(403).json({ message: 'Forbidden' });
+export const transitionStatusController = asyncHandler(async (req, res) => {
+  const complaint = await Complaint.findById(req.params.id)
+    .populate('student', 'name email');
+  if (!complaint) throw new Error('Complaint not found');
+  if (req.user.role !== 'Warden' || complaint.hostelBlock !== req.user.hostelBlock)
+    throw new Error('Forbidden');
   const allowed = ['Pending', 'In Progress', 'Resolved'];
   let target = req.body?.status;
   if (target) {
@@ -146,7 +144,7 @@ export async function transitionStatusController(req, res) {
       resolved: 'Resolved',
     };
     target = mapping[normalized] || target;
-    if (!allowed.includes(target)) return res.status(400).json({ message: 'Invalid target status' });
+    if (!allowed.includes(target)) throw new Error('Invalid target status');
     if (target !== complaint.status) {
       complaint.status = target;
     }
@@ -155,24 +153,25 @@ export async function transitionStatusController(req, res) {
     const sequence = ['Pending', 'In Progress', 'Resolved'];
     const currentIndex = sequence.indexOf(complaint.status);
     if (currentIndex === -1 || currentIndex === sequence.length - 1)
-      return res.status(400).json({ message: 'Cannot transition' });
+      throw new Error('Cannot transition');
     complaint.status = sequence[currentIndex + 1];
   }
   await complaint.save();
+  await complaint.populate('student', 'name email');
   res.json({ complaint });
-}
+});
 
-export async function addFeedbackController(req, res) {
+export const addFeedbackController = asyncHandler(async (req, res) => {
   const { rating, comment } = req.body;
   const complaint = await Complaint.findById(req.params.id);
-  if (!complaint) return res.status(404).json({ message: 'Not found' });
+  if (!complaint) throw new Error('Complaint not found');
   if (complaint.student.toString() !== req.user.id)
-    return res.status(403).json({ message: 'Forbidden' });
+    throw new Error('Forbidden');
   if (complaint.status !== 'Resolved')
-    return res.status(400).json({ message: 'Feedback allowed only after resolution' });
+    throw new Error('Feedback allowed only after resolution');
   complaint.feedback = { rating, comment, by: req.user.id };
   await complaint.save();
   res.json({ complaint });
-}
+});
 
 

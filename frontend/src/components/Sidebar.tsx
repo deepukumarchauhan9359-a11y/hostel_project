@@ -8,9 +8,9 @@ import {
   Settings,
   X,
   PlusCircle,
-  ClipboardList
+  ClipboardList,
+  User
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -21,28 +21,40 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const { user } = useAuth();
 
   const getNavigationItems = () => {
+    const baseItems = [];
+    
     switch (user?.role) {
-      case 'student':
-        return [
+      case 'Student':
+        baseItems.push(
           { icon: Home, label: 'Dashboard', to: '/dashboard/student' },
           { icon: PlusCircle, label: 'New Complaint', to: '/dashboard/student?tab=new' },
-          { icon: ClipboardList, label: 'My Complaints', to: '/dashboard/student?tab=complaints' },
-        ];
-      case 'warden':
-        return [
+          { icon: ClipboardList, label: 'My Complaints', to: '/dashboard/student?tab=complaints' }
+        );
+        break;
+      case 'Warden':
+        baseItems.push(
           { icon: Home, label: 'Dashboard', to: '/dashboard/warden' },
-          { icon: FileText, label: 'Manage Complaints', to: '/dashboard/warden' },
-        ];
-      case 'admin':
-        return [
+          { icon: FileText, label: 'Manage Complaints', to: '/dashboard/warden' }
+        );
+        break;
+      case 'Admin':
+        baseItems.push(
           { icon: Home, label: 'Dashboard', to: '/dashboard/admin' },
           { icon: BarChart3, label: 'Analytics', to: '/dashboard/admin?tab=analytics' },
           { icon: Users, label: 'Manage Users', to: '/dashboard/admin?tab=users' },
-          { icon: FileText, label: 'All Complaints', to: '/dashboard/admin?tab=complaints' },
-        ];
+          { icon: FileText, label: 'All Complaints', to: '/dashboard/admin?tab=complaints' }
+        );
+        break;
       default:
         return [];
     }
+    
+    // Add profile link to all users
+    baseItems.push(
+      { icon: User, label: 'My Profile', to: '/profile' }
+    );
+    
+    return baseItems;
   };
 
   const navigationItems = getNavigationItems();
@@ -58,11 +70,10 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       )}
 
       {/* Sidebar */}
-      <motion.aside
-        initial={{ x: -280 }}
-        animate={{ x: isOpen ? 0 : -280 }}
-        transition={{ type: "tween", duration: 0.3 }}
-        className="fixed left-0 top-0 h-full w-72 bg-white/95 backdrop-blur-sm shadow-large border-r border-secondary-200 lg:translate-x-0 lg:static lg:w-64 z-50"
+      <aside
+        className={`fixed left-0 top-0 h-full w-72 bg-white/95 backdrop-blur-sm shadow-large border-r border-secondary-200 lg:translate-x-0 lg:static lg:w-64 z-50 transition-transform duration-300 ${
+          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
       >
         <div className="flex items-center justify-between p-6 border-b border-secondary-200 bg-gradient-to-r from-primary-50 to-accent-50">
           <div className="flex items-center space-x-3">
@@ -85,12 +96,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         <nav className="mt-6 px-4">
           <ul className="space-y-2">
             {navigationItems.map((item, index) => (
-              <motion.li 
-                key={item.label}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
+              <li key={item.label}>
                 <NavLink
                   to={item.to}
                   onClick={() => onClose()}
@@ -103,7 +109,6 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                   }
                 >
                   <div className={`p-2 rounded-lg transition-colors duration-200 ${
-                    navigationItems.find(nav => nav.label === item.label)?.label === item.label && 
                     window.location.pathname.includes(item.to.split('?')[0])
                       ? 'bg-primary-100 text-primary-600'
                       : 'bg-secondary-100 text-secondary-600 group-hover:bg-primary-100 group-hover:text-primary-600'
@@ -112,7 +117,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
                   </div>
                   <span className="font-medium">{item.label}</span>
                 </NavLink>
-              </motion.li>
+              </li>
             ))}
           </ul>
         </nav>
@@ -132,7 +137,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
             </div>
           </div>
         </div>
-      </motion.aside>
+      </aside>
     </>
   );
 };

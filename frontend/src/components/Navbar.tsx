@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Bell, Menu, X, User, LogOut } from 'lucide-react';
+import { Bell, Menu, X, User, LogOut, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface NavbarProps {
@@ -9,6 +10,7 @@ interface NavbarProps {
 
 const Navbar = ({ onToggleSidebar }: NavbarProps) => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
 
   return (
@@ -75,6 +77,16 @@ const Navbar = ({ onToggleSidebar }: NavbarProps) => {
                         </span>
                       </div>
                     </div>
+                    <button
+                      onClick={() => {
+                        setShowDropdown(false);
+                        navigate('/profile');
+                      }}
+                      className="w-full px-4 py-3 text-left text-sm text-secondary-700 hover:bg-secondary-50 flex items-center space-x-3 transition-colors duration-200 group"
+                    >
+                      <Settings className="w-4 h-4 text-secondary-500 group-hover:text-primary-600 transition-colors" />
+                      <span className="group-hover:text-primary-600 transition-colors">Profile Settings</span>
+                    </button>
                     <button
                       onClick={logout}
                       className="w-full px-4 py-3 text-left text-sm text-secondary-700 hover:bg-secondary-50 flex items-center space-x-3 transition-colors duration-200 group"

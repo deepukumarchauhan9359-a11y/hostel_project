@@ -10,6 +10,7 @@ import AdminSignup from './pages/AdminSignup';
 import StudentDashboard from './pages/StudentDashboard';
 import WardenDashboard from './pages/WardenDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import UserProfile from './pages/UserProfile';
 import ProtectedRoute from './components/ProtectedRoute';
 import { ToastProvider } from './context/ToastContext';
 
@@ -19,8 +20,7 @@ function App() {
       <DataProvider>
         <ToastProvider>
           <Router>
-            <div className="min-h-screen gradient-bg">
-              <Routes>
+            <Routes>
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/signup" element={<SignupPage />} />
                 <Route path="/login/student" element={<StudentLogin />} />
@@ -61,8 +61,15 @@ function App() {
                     </ProtectedRoute>
                   } 
                 />
+                <Route 
+                  path="/profile" 
+                  element={
+                    <ProtectedRoute>
+                      <UserProfile />
+                    </ProtectedRoute>
+                  } 
+                />
               </Routes>
-            </div>
           </Router>
         </ToastProvider>
       </DataProvider>

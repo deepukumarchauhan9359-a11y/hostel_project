@@ -9,8 +9,8 @@ interface ComplaintFormProps {
 }
 
 const ComplaintForm = ({ onClose }: ComplaintFormProps) => {
-  const { user } = useAuth();
-  const { addComplaint } = useData();
+  const { user, isAuthenticated } = useAuth();
+  const { addComplaint, refreshComplaints } = useData();
   const { showToast } = useToast();
   
   const [formData, setFormData] = useState({
@@ -27,10 +27,20 @@ const ComplaintForm = ({ onClose }: ComplaintFormProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      console.log('❌ No user found');
+    if (!user || !isAuthenticated) {
+      console.log('❌ No user found or not authenticated');
+      console.log('User:', user);
+      console.log('Is Authenticated:', isAuthenticated);
+      showToast('Please log in again', 'error');
       return;
     }
+    
+    if (user.role !== 'Student') {
+      console.error('❌ User role is not Student:', user.role);
+      showToast('Only students can submit complaints', 'error');
+      return;
+    }
+    
     console.log('👤 User data:', user);
     try {
       const formDataToSend = new FormData();
@@ -45,13 +55,51 @@ const ComplaintForm = ({ onClose }: ComplaintFormProps) => {
         formDataToSend.append('attachments', file);
       });
 
+      // Get token using the same method as api.ts - ALWAYS from localStorage for FormData requests
       const token = localStorage.getItem('authToken');
       if (!token) {
         console.log('❌ No auth token found');
         showToast('Please log in again', 'error');
         return;
       }
-      console.log('🔑 Auth token found:', token ? 'Present' : 'Missing');
+      
+      // Verify user and token are in sync
+      if (!user || user.role !== 'Student') {
+        console.error('❌ User role mismatch or invalid user');
+        console.error('User from context:', user);
+        console.error('Expected role: Student, Got:', user?.role);
+        showToast('Invalid user session. Please log in as a Student.', 'error');
+        return;
+      }
+      
+      // Decode token to verify it matches user (simple check)
+      try {
+        const tokenPayload = JSON.parse(atob(token.split('.')[1]));
+        console.log('🔑 Token payload from token:', { role: tokenPayload.role, id: tokenPayload.sub });
+        console.log('👤 User from context:', { role: user.role, id: user.id });
+        
+        if (tokenPayload.role !== user.role) {
+          console.error('❌ CRITICAL: Token role does not match user context role!');
+          console.error('Token role:', tokenPayload.role);
+          console.error('Context user role:', user.role);
+          showToast('Session mismatch. Please log out and log in again.', 'error');
+          return;
+        }
+        
+        if (tokenPayload.sub !== user.id) {
+          console.error('❌ CRITICAL: Token user ID does not match context user ID!');
+          console.error('Token user ID:', tokenPayload.sub);
+          console.error('Context user ID:', user.id);
+          showToast('Session mismatch. Please log out and log in again.', 'error');
+          return;
+        }
+      } catch (e) {
+        console.error('❌ Failed to decode token:', e);
+      }
+      
+      console.log('🔑 Auth token found:', token.substring(0, 20) + '...');
+      console.log('👤 User role:', user?.role);
+      console.log('👤 User ID:', user?.id);
       console.log('📝 Form data being sent:', {
         title: formData.title,
         description: formData.description,
@@ -60,14 +108,22 @@ const ComplaintForm = ({ onClose }: ComplaintFormProps) => {
         room: (user as any).room || (user as any).roomNumber || '101',
         attachmentsCount: attachments.length
       });
+      console.log('📎 Attachments:', attachments.map(f => ({ name: f.name, type: f.type, size: f.size })));
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050/api/v1'}/complaints`, {
+      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050/api/v1'}/complaints`;
+      console.log('🌐 API URL:', apiUrl);
+
+      // Don't set Content-Type header when sending FormData - browser needs to set it with boundary
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
+          // Note: DO NOT set 'Content-Type' header - browser will set it automatically with boundary for multipart/form-data
         },
         body: formDataToSend
       });
+      
+      console.log('📡 Response status:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -80,6 +136,14 @@ const ComplaintForm = ({ onClose }: ComplaintFormProps) => {
       }
 
       const data = await response.json();
+      console.log('✅ Complaint created successfully:', data);
+      
+      // Refresh complaints to show the new one with images
+      if (refreshComplaints) {
+        await refreshComplaints();
+        console.log('✅ Complaints refreshed');
+      }
+      
       showToast(data.message || 'Complaint submitted successfully!', 'success');
       onClose();
     } catch (err) {
@@ -123,18 +187,18 @@ const ComplaintForm = ({ onClose }: ComplaintFormProps) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-large max-w-2xl w-full max-h-[90vh] overflow-y-auto scrollbar-thin">
-        <div className="flex justify-between items-center p-6 border-b border-secondary-200 bg-gradient-to-r from-primary-50 to-accent-50">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+      <div className="glass-dark rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto scrollbar-thin animate-scale-in">
+        <div className="flex justify-between items-center p-6 border-b border-gray-700/50 bg-gradient-to-r from-blue-500/10 to-purple-500/10">
           <div>
-            <h2 className="text-2xl font-bold text-secondary-900">Submit New Complaint</h2>
-            <p className="text-secondary-600 mt-1">Describe your issue and we'll help you resolve it</p>
+            <h2 className="text-2xl font-bold text-slate-50">Submit New Complaint</h2>
+            <p className="text-slate-300 mt-1">Describe your issue and we'll help you resolve it</p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-secondary-100 rounded-lg transition-colors duration-200"
+            className="p-2 hover:bg-gray-700/50 rounded-lg transition-all duration-300 transform hover:scale-110"
           >
-            <X className="w-5 h-5 text-secondary-600" />
+            <X className="w-5 h-5 text-slate-400 hover:text-slate-200" />
           </button>
         </div>
 

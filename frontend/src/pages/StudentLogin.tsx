@@ -42,27 +42,27 @@ const StudentLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-teal-100 flex items-center justify-center py-12 px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
-        <div className="text-center mb-8">
+    <div className="min-h-screen gradient-bg flex items-center justify-center py-12 px-4">
+      <div className="max-w-md w-full glass-dark rounded-lg shadow-xl p-8 animate-scale-in">
+        <div className="text-center mb-8 ">
           <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center glow floating">
               <GraduationCap className="w-6 h-6 text-white" />
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900">Student Login</h2>
-          <p className="text-gray-600">Access your complaints dashboard</p>
+          <h2 className="text-2xl font-bold text-slate-50">Student Login</h2>
+          <p className="text-coral-300">Access your complaints dashboard</p>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <p className="text-sm text-blue-800 font-medium mb-2">Demo Credentials:</p>
-          <p className="text-sm text-blue-700">Email: student@hosteleease.com</p>
-          <p className="text-sm text-blue-700">Password: student123</p>
+        <div className="bg-purple-500/25 border border-purple-500/40 rounded-lg p-4 mb-6 animate-slide-in">
+          <p className="text-sm text-brown-200 font-medium mb-2">Demo Credentials:</p>
+          <p className="text-sm text-brown-100">Email: student@hosteleease.com</p>
+          <p className="text-sm text-brown-100">Password: student123</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="email" className="block text-sm font-medium text-coral mb-1">
               Email Address
             </label>
             <input
@@ -72,13 +72,13 @@ const StudentLogin = () => {
               value={formData.email}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="input"
               placeholder="Enter your email"
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="password" className="block text-sm font-medium text-coral mb-1">
               Password
             </label>
             <input
@@ -88,7 +88,7 @@ const StudentLogin = () => {
               value={formData.password}
               onChange={handleChange}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="input"
               placeholder="Enter your password"
             />
           </div>
@@ -96,16 +96,16 @@ const StudentLogin = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 transition-colors"
+            className="btn-primary w-full py-3 text-lg font-semibold"
           >
             {loading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-gray-600">
+          <p className="text-slate-300">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-green-600 hover:underline">
+            <Link to="/signup" className="text-blue-400 hover:text-blue-300 transition-all duration-300 transform hover:scale-105">
               Sign up
             </Link>
           </p>
@@ -114,7 +114,7 @@ const StudentLogin = () => {
         <div className="mt-4">
           <Link
             to="/"
-            className="inline-flex items-center text-gray-600 hover:text-gray-900"
+            className="inline-flex items-center text-slate-400 hover:text-blue-400 transition-all duration-300 transform hover:scale-105"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Home

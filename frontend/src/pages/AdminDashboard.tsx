@@ -24,7 +24,6 @@ import {
   BookOpen,
   MessageSquare
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { apiRequest } from '../lib/api';
 
@@ -323,12 +322,9 @@ const AdminDashboard = () => {
     <div className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-        {stats.map((stat, index) => (
-          <motion.div
+        {stats.map((stat) => (
+          <div
             key={stat.title}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: index * 0.1 }}
             className="bg-white rounded-lg shadow-sm p-6"
           >
             <div className="flex items-center">
@@ -340,7 +336,7 @@ const AdminDashboard = () => {
                 <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
               </div>
             </div>
-          </motion.div>
+          </div>
         ))}
       </div>
 

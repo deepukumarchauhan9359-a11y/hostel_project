@@ -4,24 +4,19 @@ import bcrypt from 'bcryptjs';
 const UserSchema = new mongoose.Schema({
   name: { type: String },
   email: { type: String, required: true, unique: true, lowercase: true },
-  password: { type: String, required: true, select: false },
+  passwordHash: { type: String, required: true, select: false },
   role: { type: String, enum: ['Student', 'Warden', 'Admin'], default: 'Student' },
-  block: { type: String },
-  room: { type: String }
+  hostelBlock: { type: String },
+  room: { type: String },
+  isVerified: { type: Boolean, default: false }
 }, { timestamps: true });
 
-// hash password before save
-UserSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
-});
+// No pre-save hook needed since we're directly setting passwordHash
 
 // instance method to verify password (use function() so `this` is bound)
 UserSchema.methods.verifyPassword = async function (candidatePassword) {
-  if (!this.password) return false;
-  return bcrypt.compare(candidatePassword, this.password);
+  if (!this.passwordHash) return false;
+  return bcrypt.compare(candidatePassword, this.passwordHash);
 };
 
 const User = mongoose.models?.User || mongoose.model('User', UserSchema);

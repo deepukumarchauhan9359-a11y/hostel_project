@@ -112,7 +112,7 @@ export const loginController = asyncHandler(async (req, res) => {
     throw new AppError(400, 'Email and password are required');
   }
   
-  const user = await User.findOne({ email });
+  const user = await User.findOne({ email }).select('+passwordHash');
   if (!user) throw new AppError(401, 'Invalid credentials');
   
   const ok = await user.verifyPassword(password);
@@ -137,9 +137,103 @@ export const loginController = asyncHandler(async (req, res) => {
   });
 });
 
-export async function meController(req, res) {
+export const meController = asyncHandler(async (req, res) => {
+  if (!req.user || !req.user.id) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+  
   const user = await User.findById(req.user.id).select('-passwordHash');
-  return res.json({ user });
-}
+  if (!user) {
+    return res.status(401).json({ message: 'User not found' });
+  }
+  
+  return res.json({ 
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      hostelBlock: user.hostelBlock,
+      room: user.room,
+      isVerified: user.isVerified
+    }
+  });
+});
+
+// Update user profile
+export const updateProfileController = asyncHandler(async (req, res) => {
+  if (!req.user || !req.user.id) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  const { name, email, hostelBlock, room } = req.body;
+  const user = await User.findById(req.user.id);
+  
+  if (!user) {
+    return res.status(404).json({ message: 'User not found' });
+  }
+
+  // Update allowed fields
+  if (name !== undefined) user.name = name;
+  if (email !== undefined) {
+    // Check if email is already taken by another user
+    const existingUser = await User.findOne({ email, _id: { $ne: user.id } });
+    if (existingUser) {
+      throw new AppError(409, 'Email already in use');
+    }
+    user.email = email;
+  }
+  if (hostelBlock !== undefined) user.hostelBlock = hostelBlock;
+  if (room !== undefined) user.room = room;
+
+  await user.save();
+
+  return res.json({
+    message: 'Profile updated successfully',
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      hostelBlock: user.hostelBlock,
+      room: user.room,
+      isVerified: user.isVerified
+    }
+  });
+});
+
+// Update password
+export const updatePasswordController = asyncHandler(async (req, res) => {
+  if (!req.user || !req.user.id) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    throw new AppError(400, 'Current password and new password are required');
+  }
+
+  if (newPassword.length < 6) {
+    throw new AppError(400, 'Password must be at least 6 characters');
+  }
+
+  const user = await User.findById(req.user.id).select('+passwordHash');
+  if (!user) {
+    return res.status(404).json({ message: 'User not found' });
+  }
+
+  // Verify current password
+  const isValid = await user.verifyPassword(currentPassword);
+  if (!isValid) {
+    throw new AppError(401, 'Current password is incorrect');
+  }
+
+  // Hash and save new password
+  user.passwordHash = await bcrypt.hash(newPassword, 10);
+  await user.save();
+
+  return res.json({ message: 'Password updated successfully' });
+});
 
 

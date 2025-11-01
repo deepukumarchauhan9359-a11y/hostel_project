@@ -52,6 +52,7 @@ export async function seedDatabase() {
   try {
     const adminEmail = 'admin@hosteleease.com';
     const wardenEmail = 'warden@hosteleease.com';
+    const studentEmail = 'student@hosteleease.com';
 
     // Create admin user
     let adminUser = await User.findOne({ email: adminEmail });
@@ -80,6 +81,22 @@ export async function seedDatabase() {
         isVerified: true, // Warden is verified by default
       });
       console.log(`Seeded warden user: ${wardenEmail}`);
+    }
+
+    // Create student user
+    let studentUser = await User.findOne({ email: studentEmail });
+    if (!studentUser) {
+      const passwordHash = await bcrypt.hash('student123', 10);
+      studentUser = await User.create({
+        name: 'Student User',
+        email: studentEmail,
+        passwordHash,
+        role: 'Student',
+        hostelBlock: 'Block A',
+        room: '101',
+        isVerified: true, // Student is verified for demo purposes
+      });
+      console.log(`Seeded student user: ${studentEmail}`);
     }
   } catch (error) {
     console.error('Error seeding database:', error.message);

@@ -8,10 +8,12 @@ interface User {
   role: 'Student' | 'Warden' | 'Admin';
   hostelBlock?: string;
   room?: string;
+  isVerified?: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
+  setUser: (user: User | null) => void;
   login: (email: string, password: string, role: string) => Promise<boolean>;
   logout: () => void;
   signup: (userData: Omit<User, 'id'> & { password: string }) => Promise<boolean>;
@@ -33,64 +35,173 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Initialize user from localStorage immediately to prevent logout on refresh
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const savedUser = localStorage.getItem('userData');
+      if (savedUser) {
+        return JSON.parse(savedUser);
+      }
+    } catch (e) {
+      console.warn('Failed to parse saved user data:', e);
+    }
+    return null;
+  });
+  
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    // Check if we have a token - if yes, user should be considered authenticated
+    return !!localStorage.getItem('authToken');
+  });
 
   useEffect(() => {
-    // Check for existing token in localStorage
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      setAuthToken(token);
-      // Fetch user data with the existing token
-      fetchUserData(token);
-    }
+    // Check for existing token in localStorage on mount
+    const restoreSession = async () => {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        console.log('🔑 Found token in localStorage, restoring session...');
+        setAuthToken(token);
+        // Immediately set as authenticated while fetching user data
+        // This prevents logout flash on page refresh
+        setIsAuthenticated(true);
+        
+        // Fetch user data with the existing token - don't clear token if this fails
+        try {
+          await fetchUserData(token);
+        } catch (error) {
+          console.warn('⚠️ Could not restore session, but keeping token:', error);
+          // Don't clear token - might be a temporary network issue
+          // User stays authenticated with token and saved user data
+        }
+      } else {
+        console.log('❌ No token found in localStorage');
+        setIsAuthenticated(false);
+        setUser(null);
+        localStorage.removeItem('userData');
+      }
+    };
+    
+    restoreSession();
   }, []);
 
   const fetchUserData = async (token: string) => {
     try {
       console.log('🔄 Fetching user data with token...');
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050/api/v1'}/auth/me`, {
+      setAuthToken(token); // Ensure token is set before making request
+      
+      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050/api/v1'}/auth/me`;
+      console.log('API URL:', apiUrl);
+      
+      // Create abort controller for timeout - increased to 10 seconds
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      const response = await fetch(apiUrl, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       
       console.log('📡 Auth response status:', response.status);
       
       if (response.ok) {
         const userData = await response.json();
         console.log('✅ User data received:', userData.user);
-        setUser(userData.user);
-        setIsAuthenticated(true);
-        console.log('User session restored:', userData.user);
-      } else {
+        
+        if (userData.user) {
+          // Save user data to localStorage for immediate restore on refresh
+          localStorage.setItem('userData', JSON.stringify(userData.user));
+          setUser(userData.user);
+          setIsAuthenticated(true);
+          console.log('✅ User session restored successfully');
+          return; // Success - exit early
+        } else {
+          throw new Error('Invalid user data received');
+        }
+      } else if (response.status === 401 || response.status === 403) {
+        // Only clear token on actual auth errors
         const errorText = await response.text();
-        console.log('❌ Auth failed:', errorText);
-        // Token is invalid, clear it
+        console.log('❌ Auth failed (401/403), token is invalid');
+        // Only clear if it's definitely an auth error
         localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
         clearAuthToken();
-        console.log('Invalid token, cleared from storage');
+        setUser(null);
+        setIsAuthenticated(false);
+      } else {
+        // Server error (500, etc.) - keep token, might be temporary
+        console.warn('⚠️ Server error during auth check, keeping token:', response.status);
+        // Don't clear token - server might be down temporarily
       }
-    } catch (error) {
+    } catch (error: any) {
+      // Network errors or timeouts - NEVER clear token on these
+      if (error.name === 'AbortError') {
+        console.warn('⚠️ Request timeout, keeping token - might be slow network');
+        return; // Keep token, user stays logged in
+      }
+      
+      if (error.name === 'TypeError' || error.message?.includes('fetch')) {
+        console.warn('⚠️ Network error, keeping token - might be offline');
+        return; // Keep token, user stays logged in
+      }
+      
       console.error('💥 Error fetching user data:', error);
-      // Clear invalid token
-      localStorage.removeItem('authToken');
-      clearAuthToken();
+      // Only clear token if it's explicitly an auth error from the server
+      // For all other errors, keep the token and user logged in
     }
   };
 
   const login = async (email: string, password: string, role: string): Promise<boolean> => {
-    const res = await apiRequest<{ token: string; user: User }>(
-      'POST',
-      '/auth/login',
-      { email, password }
-    );
-    setAuthToken(res.token);
-    localStorage.setItem('authToken', res.token); // Persist token
-    setUser(res.user);
-    setIsAuthenticated(true);
-    return true;
+    try {
+      // Clear any existing token first
+      clearAuthToken();
+      localStorage.removeItem('authToken');
+      
+      const res = await apiRequest<{ token: string; user: User }>(
+        'POST',
+        '/auth/login',
+        { email, password },
+        false // Don't require auth for login
+      );
+      
+      // Verify the user role matches what we expect
+      if (res.user.role !== role) {
+        console.warn('⚠️ Role mismatch: Expected', role, 'but got', res.user.role);
+        // Still allow login but log warning
+      }
+      
+      // Set new token and user
+      setAuthToken(res.token);
+      localStorage.setItem('authToken', res.token); // Persist token
+      localStorage.setItem('userData', JSON.stringify(res.user)); // Persist user data
+      setUser(res.user);
+      setIsAuthenticated(true);
+      
+      console.log('✅ Login successful, user data set:', res.user);
+      console.log('✅ Token stored:', res.token.substring(0, 20) + '...');
+      
+      // Verify token is stored correctly
+      const storedToken = localStorage.getItem('authToken');
+      if (storedToken !== res.token) {
+        console.error('❌ Token mismatch! Setting it again...');
+        localStorage.setItem('authToken', res.token);
+      }
+      
+      // Force a small delay to ensure state is updated before navigation
+      await new Promise(resolve => setTimeout(resolve, 100));
+      return true;
+    } catch (error) {
+      console.error('Login error:', error);
+      // Clear any partial state on error
+      clearAuthToken();
+      localStorage.removeItem('authToken');
+      setUser(null);
+      setIsAuthenticated(false);
+      throw error;
+    }
   };
 
   const logout = () => {
@@ -98,6 +209,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setIsAuthenticated(false);
     clearAuthToken();
     localStorage.removeItem('authToken'); // Clear persisted token
+    localStorage.removeItem('userData'); // Clear persisted user data
   };
 
   const signup = async (userData: Omit<User, 'id'> & { password: string }): Promise<boolean> => {
@@ -120,6 +232,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const value = {
     user,
+    setUser,
     login,
     logout,
     signup,

@@ -3,8 +3,10 @@ import mongoose from 'mongoose';
 // Sub-schemas
 const AttachmentSchema = new mongoose.Schema({
   filename: { type: String },
+  originalName: { type: String },
   path: { type: String },
-  mimeType: { type: String }
+  mimetype: { type: String },
+  size: { type: Number }
 }, { _id: false });
 
 const FeedbackSchema = new mongoose.Schema({
@@ -20,9 +22,10 @@ const ComplaintSchema = new mongoose.Schema({
   category: { type: String },
   priority: { type: String, enum: ['Low', 'Medium', 'High'], default: 'Medium' },
   room: { type: String },
+  hostelBlock: { type: String },
   attachments: { type: [AttachmentSchema], default: [] },
   feedback: { type: FeedbackSchema, default: undefined },
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  student: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   status: { type: String, enum: ['Pending', 'In Progress', 'Resolved'], default: 'Pending' }
 }, { timestamps: true });
 
