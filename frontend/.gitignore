@@ -1,23 +1,65 @@
-logs
-*.log
+# dependencies
+node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
+# production build
+build/
+dist/
 
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+# environment variables
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# testing
+coverage/
+jest/
+*.spec.js
+*.test.js
+
+# misc
+.DS_Store
+Thumbs.db
+
+# editor directories and files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# logs
+logs/
+*.log
+
+# system files
+ehthumbs.db
+Desktop.ini
+
+# temporary cache and lock files
+.cache/
+.tmp/
+*.tmp
+*.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# service worker cache
+workbox-*
+sw.js
+
+# TypeScript
+*.tsbuildinfo
+
+# eslint cache
+.eslintcache
+
+# local envs for frontend tools
+.vercel/
+.netlify/
+firebase-debug.log
