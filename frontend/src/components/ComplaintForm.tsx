@@ -110,7 +110,7 @@ const ComplaintForm = ({ onClose }: ComplaintFormProps) => {
       });
       console.log('📎 Attachments:', attachments.map(f => ({ name: f.name, type: f.type, size: f.size })));
 
-      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050/api/v1'}/complaints`;
+      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'https://hostel-project-2.onrender.com/api/v1'}/complaints`;
       console.log('🌐 API URL:', apiUrl);
 
       // Don't set Content-Type header when sending FormData - browser needs to set it with boundary

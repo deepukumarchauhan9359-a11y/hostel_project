@@ -73,7 +73,7 @@ const ComplaintCard = ({ complaint, onStatusUpdate, onDelete, onFeedback, showAc
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {complaint.attachments.map((attachment: any, index: number) => {
-                const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050/api/v1';
+                const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://hostel-project-2.onrender.com/api/v1';
                 const fileUrl = `${baseUrl}/complaints/files/${attachment.filename}`;
                 const isImage = attachment.mimetype?.startsWith('image/') || attachment.originalName?.match(/\.(jpg|jpeg|png|gif|webp)$/i);
                 

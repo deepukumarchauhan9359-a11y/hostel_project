@@ -1,4 +1,4 @@
-export const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:5050/api/v1';
+export const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'https://hostel-project-2.onrender.com/api/v1';
 
 let inMemoryToken: string | null = null;
 

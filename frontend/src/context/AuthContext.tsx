@@ -88,7 +88,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.log('🔄 Fetching user data with token...');
       setAuthToken(token); // Ensure token is set before making request
       
-      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5050/api/v1'}/auth/me`;
+      const apiUrl = `${import.meta.env.VITE_API_BASE_URL || 'https://hostel-project-2.onrender.com/api/v1'}/auth/me`;
       console.log('API URL:', apiUrl);
       
       // Create abort controller for timeout - increased to 10 seconds
