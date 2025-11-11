@@ -6,8 +6,13 @@ import { errorHandler } from './errors/errorHandler.js';
 import { getDatabaseState } from './config/db.js';
 
 const app = express();
-
-app.use(cors({ origin: true, credentials: true }));
+app.use(
+  cors({
+    origin: "*", // <-- allows all origins
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use(express.json());
 app.use(morgan('dev'));
 
